@@ -1,3 +1,4 @@
+# CS6240 - HW1 - Alptug Guven
 # Makefile for Hadoop MapReduce WordCount demo project.
 
 # Customize these paths for your environment.
@@ -15,7 +16,7 @@ hdfs.output=output
 # AWS EMR Execution
 aws.emr.release=emr-6.10.0
 aws.region=us-east-1
-aws.bucket.name=cs6240-hw1-AlptugGuven
+aws.bucket.name=cs6240-hw1-alptugguven
 aws.subnet.id=subnet-6356553a
 aws.input=input
 aws.output=output
@@ -35,8 +36,6 @@ clean-local-output:
 	rm -rf ${local.output}*
 
 # Runs standalone
-# Make sure Hadoop  is set up (in /etc/hadoop files) for standalone operation (not pseudo-cluster).
-# https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/SingleCluster.html#Standalone_Operation
 local: jar clean-local-output
 	${hadoop.root}/bin/hadoop jar ${jar.path} ${job.name} ${local.input} ${local.output}
 
@@ -47,7 +46,7 @@ start-hdfs:
 # Stop HDFS
 stop-hdfs: 
 	${hadoop.root}/sbin/stop-dfs.sh
-	
+	    
 # Start YARN
 start-yarn: stop-yarn
 	${hadoop.root}/sbin/start-yarn.sh
@@ -61,7 +60,7 @@ format-hdfs: stop-hdfs
 	rm -rf /tmp/hadoop*
 	${hadoop.root}/bin/hdfs namenode -format
 
-# Initializes user & input directories of HDFS.	
+# Initializes user & input directories of HDFS. 
 init-hdfs: start-hdfs
 	${hadoop.root}/bin/hdfs dfs -rm -r -f /user
 	${hadoop.root}/bin/hdfs dfs -mkdir /user
@@ -81,9 +80,7 @@ download-output-hdfs: clean-local-output
 	mkdir ${local.output}
 	${hadoop.root}/bin/hdfs dfs -get ${hdfs.output}/* ${local.output}
 
-# Runs pseudo-clustered (ALL). ONLY RUN THIS ONCE, THEN USE: make pseudoq
-# Make sure Hadoop  is set up (in /etc/hadoop files) for pseudo-clustered operation (not standalone).
-# https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/SingleCluster.html#Pseudo-Distributed_Operation
+# Runs pseudo-clustered (ALL).
 pseudo: jar stop-yarn format-hdfs init-hdfs upload-input-hdfs start-yarn clean-local-output 
 	${hadoop.root}/bin/hadoop jar ${jar.path} ${job.name} ${hdfs.input} ${hdfs.output}
 	make download-output-hdfs
@@ -95,23 +92,23 @@ pseudoq: jar clean-local-output clean-hdfs-output
 
 # Create S3 bucket.
 make-bucket:
-	aws s3 mb s3://${aws.bucket.name}
+	/usr/local/bin/aws s3 mb s3://${aws.bucket.name}
 
 # Upload data to S3 input dir.
 upload-input-aws: make-bucket
-	aws s3 sync ${local.input} s3://${aws.bucket.name}/${aws.input}
-	
+	/usr/local/bin/aws s3 sync ${local.input} s3://${aws.bucket.name}/${aws.input}
+	    
 # Delete S3 output dir.
 delete-output-aws:
-	aws s3 rm s3://${aws.bucket.name}/ --recursive --exclude "*" --include "${aws.output}*"
+	/usr/local/bin/aws s3 rm s3://${aws.bucket.name}/${aws.output} --recursive
 
 # Upload application to S3 bucket.
 upload-app-aws:
-	aws s3 cp ${jar.path} s3://${aws.bucket.name}
+	/usr/local/bin/aws s3 cp ${jar.path} s3://${aws.bucket.name}
 
 # Main EMR launch.
 aws: jar upload-app-aws delete-output-aws
-	aws emr create-cluster \
+	/usr/local/bin/aws emr create-cluster \
 		--name "WordCount MR Cluster" \
 		--release-label ${aws.emr.release} \
 		--instance-groups '[{"InstanceCount":${aws.core.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":${aws.primary.num.nodes},"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
@@ -126,7 +123,7 @@ aws: jar upload-app-aws delete-output-aws
 # Download output from S3.
 download-output-aws: clean-local-output
 	mkdir ${local.output}
-	aws s3 sync s3://${aws.bucket.name}/${aws.output} ${local.output}
+	/usr/local/bin/aws s3 sync s3://${aws.bucket.name}/${aws.output} ${local.output}
 
 # Change to standalone mode.
 switch-standalone:
